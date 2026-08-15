@@ -174,6 +174,32 @@
       font-style: italic;
     }
 
+    /* BOTÃO TOGGLE DA LEGENDA */
+    .legend-toggle-btn-container {
+      margin-bottom: 6px;
+    }
+
+    .legend-toggle-btn {
+      background: #ffffff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      color: #2c3e50;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .legend-toggle-btn:hover {
+      background: #f4f4f4;
+      color: #9e1418;
+    }
+
     /* LEGENDA DINÂMICA */
     .info.legend {
       background: rgba(255, 255, 255, 0.95);
@@ -186,8 +212,8 @@
       overflow-y: auto;
       max-width: 320px;
       color: #333;
-      margin-left: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 6px;
+      display: none;
     }
 
     .legend h4 {
@@ -433,34 +459,45 @@
       white-space: nowrap;
     }
 
-    /* =========================================================
-       REGRAS DE RESPONSIVIDADE PARA CELULAR E TABLET (v1.6.6.1)
-       ========================================================= */
+    /* REGRAS DE RESPONSIVIDADE E FIX DE CAMADAS MOBILE */
     @media (max-width: 768px) {
       .header-title {
-        font-size: 13px !important;
+        font-size: 12px !important;
       }
 
       .header-logo {
-        height: 40px !important;
+        height: 36px !important;
       }
 
       .badge-266 {
-        display: none !important; /* Oculta o selo no celular para economizar espaço */
+        display: none !important;
       }
 
       .info.legend {
-        max-width: 200px !important;
+        max-width: 220px !important;
         font-size: 10px !important;
-        max-height: 200px !important;
+        max-height: 180px !important;
       }
 
       .painel-ibge-content {
-        width: 200px !important;
+        width: 190px !important;
       }
 
       .leaflet-control-geosearch {
-        max-width: 220px !important;
+        max-width: 180px !important;
+      }
+
+      .leaflet-control-layers {
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important;
+        z-index: 1000 !important;
+      }
+
+      .leaflet-control-layers-expanded {
+        padding: 10px !important;
+        background: #ffffff !important;
+        width: 210px !important;
       }
     }
   </style>
@@ -534,10 +571,6 @@
         <a href="limite_bairros_2026_a0.pdf" download target="_blank" class="download-link-btn">
           <i class="fa-solid fa-file-pdf" style="font-size: 22px; color: #e74c3c;"></i>
           <span>Limite dos Bairros (2026) A0</span>
-        </a>
-        <a href="A0_ZEEC.pdf" download target="_blank" class="download-link-btn">
-          <i class="fa-solid fa-file-pdf" style="font-size: 22px; color: #e74c3c;"></i>
-          <span>Zoneamento Econômico-Ecológico do Ceará</span>
         </a>
       </div>
 
@@ -618,13 +651,13 @@
     const mapLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20,
       subdomains: 'abcd',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
     });
 
     const mapDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20,
       subdomains: 'abcd',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
     });
 
     const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -639,7 +672,8 @@
 
     const map = L.map('map', {
       layers: [esriSat],
-      zoomControl: false
+      zoomControl: false,
+      tap: true
     });
 
     // Controle de Zoom
@@ -978,45 +1012,69 @@
       });
     }
 
-    // 7 & 8. ZEEC
-    function getCorZeec(subzona) {
-      if (!subzona) return '#95a5a6';
-      const sub = String(subzona).toUpperCase().trim();
-
-      if (sub.includes('PRESERVAÇÃO') || sub.includes('PRESERVACAO') || sub.includes('SP')) return '#27ae60';
-      if (sub.includes('CONSERVAÇÃO') || sub.includes('CONSERVACAO') || sub.includes('SC')) return '#2ecc71';
-      if (sub.includes('DULCÍCOLA') || sub.includes('DULCICOLA') || sub.includes('RECURSOS HÍDRICOS') || sub.includes('LAGOA') || sub.includes('RIO')) return '#2980b9';
-      if (sub.includes('ORLA') || sub.includes('PRAIA') || sub.includes('DUNA')) return '#f1c40f';
-      if (sub.includes('URBANA') || sub.includes('OCUPAÇÃO') || sub.includes('OCUPACAO') || sub.includes('EDIFICADA')) return '#e67e22';
-      if (sub.includes('AGRO') || sub.includes('SILVO') || sub.includes('PASTORIL') || sub.includes('RURAL')) return '#8e44ad';
-      if (sub.includes('INDUSTRIAL') || sub.includes('PORTO') || sub.includes('PORTUÁRIA')) return '#c0392b';
-
-      let hash = 0;
-      for (let i = 0; i < sub.length; i++) {
-        hash = sub.charCodeAt(i) + ((hash << 5) - hash);
+    // 7 & 8. ZEEC - CORES AMBIENTAIS E POPUPS
+    function getPropriedadeZeec(props, nomeCampo) {
+      if (!props) return '';
+      for (let key in props) {
+        if (key.toLowerCase() === nomeCampo.toLowerCase()) {
+          return props[key];
+        }
       }
-      let color = '#';
-      for (let i = 0; i < 3; i++) {
-        let value = (hash >> (i * 8)) & 0xFF;
-        color += ('00' + value.toString(16)).substr(-2);
-      }
-      return color;
+      return '';
+    }
+
+    function getCorZeec(feature) {
+      const props = feature ? feature.properties : null;
+      if (!props) return '#78909c';
+
+      const subzona = String(getPropriedadeZeec(props, 'sub_zonas') || getPropriedadeZeec(props, 'sub_zona') || getPropriedadeZeec(props, 'subzonas') || getPropriedadeZeec(props, 'subzona')).toUpperCase().trim();
+      const zona = String(getPropriedadeZeec(props, 'zonas') || getPropriedadeZeec(props, 'zona')).toUpperCase().trim();
+
+      // Mapeamento por Características Ambientais Reais:
+      if (subzona.includes('MANGUEZAL DEGRADADO') || subzona.includes('MANGUE')) return '#33691e'; 
+      if (subzona.includes('ALAGADO')) return '#00acc1'; 
+      if (subzona.includes('CURSO D\'ÁGUA') || subzona.includes('CURSO D\'AGUA') || subzona.includes('CURSO D AGUA')) return '#0288d1'; 
+      if (subzona.includes('LAGOA') || subzona.includes('LAGUNA')) return '#0097a7'; 
+      if (subzona.includes('RIO')) return '#00838f'; 
+      if (subzona.includes('FAIXA PRAIAL') || subzona.includes('PRAIA')) return '#ffe082'; 
+      if (subzona.includes('DUNAS MOVEIS') || subzona.includes('DUNAS MÓVEIS')) return '#ffd54f'; 
+      if (subzona.includes('DUNAS FIXAS POR VEGETAÇÃO') || subzona.includes('DUNAS FIXAS POR VEGETACAO')) return '#66bb6a'; 
+      if (subzona.includes('DUNAS FIXAS')) return '#c0ca33'; 
+      if (subzona.includes('FALÁSIAS') || subzona.includes('FALASIAS')) return '#e64a19'; 
+      if (subzona.includes('PLANÍCIES FLUVIAS') || subzona.includes('PLANICIES FLUVIAS') || subzona.includes('PLANÍCIE FLUVIAL') || subzona.includes('PLANICIE FLUVIAL')) return '#26a69a'; 
+      if (subzona.includes('PRESERVAÇÃO') || subzona.includes('PRESERVACAO')) return '#1b5e20'; 
+      if (subzona.includes('OCUPAÇÃO URBANA') || subzona.includes('OCUPACAO URBANA')) return '#f57c00'; 
+      if (subzona.includes('USO SUSTENTÁVEL') || subzona.includes('USO SUSTENTAVEL')) return '#8d6e63'; 
+
+      if (zona.includes('PRESERVAÇÃO') || zona.includes('PRESERVACAO')) return '#2e7d32';
+      if (zona.includes('USO SUSTENTÁVEL') || zona.includes('USO SUSTENTAVEL')) return '#d84315';
+
+      return '#78909c';
+    }
+
+    function processarPopupZeec(feature, tituloCamada) {
+      const props = feature.properties || {};
+      const subzona = getPropriedadeZeec(props, 'sub_zonas') || getPropriedadeZeec(props, 'sub_zona') || getPropriedadeZeec(props, 'subzonas') || getPropriedadeZeec(props, 'subzona') || 'Não informada';
+      const zona = getPropriedadeZeec(props, 'zonas') || getPropriedadeZeec(props, 'zona') || 'Não informada';
+
+      return `
+        <div style="font-family: sans-serif; min-width: 200px;">
+          <h3 style="margin: 0 0 6px 0; color: #2c3e50;">${tituloCamada}</h3>
+          <b>Sub-zona:</b> ${subzona}<br>
+          <b>Zona:</b> ${zona}
+        </div>
+      `;
     }
 
     let camadaZeecPlanicie;
     if (typeof zeecPlanicieLitoranea !== 'undefined') {
       camadaZeecPlanicie = L.geoJSON(zeecPlanicieLitoranea, {
         style: function(feature) {
-          const subZona = feature.properties ? (feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || '') : '';
-          const cor = getCorZeec(subZona);
-          return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.5 };
+          const cor = getCorZeec(feature);
+          return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.65 };
         },
         onEachFeature: function (feature, layer) {
-          if (feature.properties) {
-            const subZona = feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || 'N/A';
-            const zona = feature.properties.ZONAS || feature.properties.ZONA || feature.properties.zonas || feature.properties.zona || 'N/A';
-            layer.bindPopup(`<div style="font-family: sans-serif;"><h3>ZEEC - Planície Litorânea</h3><b>Sub-zona:</b> ${subZona}<br><b>Zona:</b> ${zona}</div>`);
-          }
+          layer.bindPopup(processarPopupZeec(feature, 'ZEEC - Planície Litorânea'));
         }
       });
     }
@@ -1025,16 +1083,11 @@
     if (typeof zeecSistemasInteriores !== 'undefined') {
       camadaZeecSistemas = L.geoJSON(zeecSistemasInteriores, {
         style: function(feature) {
-          const subZona = feature.properties ? (feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || '') : '';
-          const cor = getCorZeec(subZona);
-          return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.5 };
+          const cor = getCorZeec(feature);
+          return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.65 };
         },
         onEachFeature: function (feature, layer) {
-          if (feature.properties) {
-            const subZona = feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || 'N/A';
-            const zona = feature.properties.ZONAS || feature.properties.ZONA || feature.properties.zonas || feature.properties.zona || 'N/A';
-            layer.bindPopup(`<div style="font-family: sans-serif;"><h3>ZEEC - Sistemas Interiores</h3><b>Sub-zona:</b> ${subZona}<br><b>Zona:</b> ${zona}</div>`);
-          }
+          layer.bindPopup(processarPopupZeec(feature, 'ZEEC - Sistemas Interiores'));
         }
       });
     }
@@ -1058,7 +1111,11 @@
     if (camadaZeecPlanicie) overlayMaps["ZEEC - Planície Litorânea"] = camadaZeecPlanicie;
     if (camadaZeecSistemas) overlayMaps["ZEEC - Sistemas Interiores"] = camadaZeecSistemas;
 
-    const layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+    const isMobile = window.innerWidth <= 768;
+    const layerControl = L.control.layers(baseMaps, overlayMaps, { 
+      position: 'topright',
+      collapsed: !isMobile
+    }).addTo(map);
 
     // ALTERAÇÃO DE COR DO LIMITE MUNICIPAL AO MUDAR O MAPA DE FUNDO
     map.on('baselayerchange', function (e) {
@@ -1071,41 +1128,79 @@
       }
     });
 
-    // GERENCIAMENTO DA LEGENDA DINÂMICA
+    // CONTROLE DE LEGENDA OCULTÁVEL COM BOTÃO FLUTUANTE
+    let legendaAbertaManual = false;
+
     const legendControl = L.control({ position: 'bottomleft' });
 
     legendControl.onAdd = function () {
-      const div = L.DomUtil.create('div', 'info legend');
-      div.id = 'legend-box';
-      div.style.display = 'none';
-      L.DomEvent.disableClickPropagation(div);
-      return div;
+      const container = L.DomUtil.create('div', 'legend-container');
+      
+      container.innerHTML = `
+        <div class="legend-toggle-btn-container" id="legend-btn-container" style="display: none;">
+          <button class="legend-toggle-btn" onclick="toggleLegendaVisual()">
+            <i class="fa-solid fa-list-ul"></i>
+            <span>Legenda</span>
+          </button>
+        </div>
+        <div class="info legend" id="legend-box"></div>
+      `;
+
+      L.DomEvent.disableClickPropagation(container);
+      return container;
     };
     legendControl.addTo(map);
 
-    function extrairSubzonasUnicas(geojsonData) {
-      const subzonas = new Set();
+    function toggleLegendaVisual() {
+      const legendBox = document.getElementById('legend-box');
+      if (!legendBox) return;
+
+      if (legendBox.style.display === 'block') {
+        legendBox.style.display = 'none';
+        legendaAbertaManual = false;
+      } else {
+        legendBox.style.display = 'block';
+        legendaAbertaManual = true;
+      }
+    }
+
+    function extrairItensZeecUnicos(geojsonData) {
+      const mapaItens = new Map();
       if (geojsonData && geojsonData.features) {
         geojsonData.features.forEach(f => {
           if (f.properties) {
-            const nomeSub = f.properties.SUB_ZONAS || f.properties.sub_zonas || f.properties.SUB_ZONA || f.properties.sub_zona;
-            if (nomeSub && String(nomeSub).trim() !== '') {
-              subzonas.add(String(nomeSub).trim());
+            const sub = getPropriedadeZeec(f.properties, 'sub_zonas') || getPropriedadeZeec(f.properties, 'sub_zona') || getPropriedadeZeec(f.properties, 'subzonas') || getPropriedadeZeec(f.properties, 'subzona');
+            const zona = getPropriedadeZeec(f.properties, 'zonas') || getPropriedadeZeec(f.properties, 'zona');
+            const rotulo = sub || zona;
+            if (rotulo && String(rotulo).trim() !== '' && !mapaItens.has(rotulo)) {
+              mapaItens.set(rotulo, getCorZeec(f));
             }
           }
         });
       }
-      return Array.from(subzonas).sort();
+      return mapaItens;
     }
 
     function atualizarLegenda() {
       const legendBox = document.getElementById('legend-box');
-      if (!legendBox) return;
+      const btnContainer = document.getElementById('legend-btn-container');
+      if (!legendBox || !btnContainer) return;
 
       let html = '';
       let temZoneamento = camadaZoneamento && map.hasLayer(camadaZoneamento);
       let temZeecPlanicie = camadaZeecPlanicie && map.hasLayer(camadaZeecPlanicie);
       let temZeecSistemas = camadaZeecSistemas && map.hasLayer(camadaZeecSistemas);
+
+      const camadaAtiva = temZoneamento || temZeecPlanicie || temZeecSistemas;
+
+      if (!camadaAtiva) {
+        btnContainer.style.display = 'none';
+        legendBox.style.display = 'none';
+        legendaAbertaManual = false;
+        return;
+      }
+
+      btnContainer.style.display = 'block';
 
       if (temZoneamento) {
         html += '<h4>Legenda - Zoneamento</h4>';
@@ -1119,32 +1214,28 @@
         if (temZoneamento) html += '<hr style="margin: 8px 0; border: 0; border-top: 1px solid #ccc;">';
         html += '<h4>Legenda - ZEEC</h4>';
 
-        let subzonasEncontradas = new Set();
+        let mapaZeecTotal = new Map();
 
         if (temZeecPlanicie && typeof zeecPlanicieLitoranea !== 'undefined') {
-          extrairSubzonasUnicas(zeecPlanicieLitoranea).forEach(s => subzonasEncontradas.add(s));
+          extrairItensZeecUnicos(zeecPlanicieLitoranea).forEach((cor, nome) => mapaZeecTotal.set(nome, cor));
         }
         if (temZeecSistemas && typeof zeecSistemasInteriores !== 'undefined') {
-          extrairSubzonasUnicas(zeecSistemasInteriores).forEach(s => subzonasEncontradas.add(s));
+          extrairItensZeecUnicos(zeecSistemasInteriores).forEach((cor, nome) => mapaZeecTotal.set(nome, cor));
         }
 
-        const listaSubzonas = Array.from(subzonasEncontradas).sort();
-
-        if (listaSubzonas.length > 0) {
-          listaSubzonas.forEach(subName => {
-            const corSub = getCorZeec(subName);
-            html += `<div class="legend-item"><span class="legend-color" style="background:${corSub}"></span> ${subName}</div>`;
+        if (mapaZeecTotal.size > 0) {
+          Array.from(mapaZeecTotal.keys()).sort().forEach(nomeItem => {
+            const corItem = mapaZeecTotal.get(nomeItem);
+            html += `<div class="legend-item"><span class="legend-color" style="background:${corItem}"></span> ${nomeItem}</div>`;
           });
         } else {
-          html += '<div style="font-style: italic; color: #777;">Carregando subzonas...</div>';
+          html += '<div style="font-style: italic; color: #777;">Sem feições na área selecionada</div>';
         }
       }
 
-      if (temZoneamento || temZeecPlanicie || temZeecSistemas) {
-        legendBox.innerHTML = html;
+      legendBox.innerHTML = html;
+      if (legendaAbertaManual) {
         legendBox.style.display = 'block';
-      } else {
-        legendBox.style.display = 'none';
       }
     }
 
