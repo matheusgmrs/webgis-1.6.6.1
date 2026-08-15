@@ -459,7 +459,7 @@
       white-space: nowrap;
     }
 
-    /* REGRAS DE RESPONSIVIDADE E FIX DE CAMADAS MOBILE */
+    /* REGRAS DE RESPONSIVIDADE MOBILE */
     @media (max-width: 768px) {
       .header-title {
         font-size: 12px !important;
@@ -487,17 +487,10 @@
         max-width: 180px !important;
       }
 
-      .leaflet-control-layers {
-        max-height: 70vh !important;
+      /* Controla a altura do menu suspenso de camadas para não ocupar a tela toda */
+      .leaflet-control-layers-list {
+        max-height: 50vh !important;
         overflow-y: auto !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important;
-        z-index: 1000 !important;
-      }
-
-      .leaflet-control-layers-expanded {
-        padding: 10px !important;
-        background: #ffffff !important;
-        width: 210px !important;
       }
     }
   </style>
@@ -1111,10 +1104,9 @@
     if (camadaZeecPlanicie) overlayMaps["ZEEC - Planície Litorânea"] = camadaZeecPlanicie;
     if (camadaZeecSistemas) overlayMaps["ZEEC - Sistemas Interiores"] = camadaZeecSistemas;
 
-    const isMobile = window.innerWidth <= 768;
     const layerControl = L.control.layers(baseMaps, overlayMaps, { 
       position: 'topright',
-      collapsed: !isMobile
+      collapsed: true // Mantém o painel recolhido em forma de botão tanto em Desktop como Mobile
     }).addTo(map);
 
     // ALTERAÇÃO DE COR DO LIMITE MUNICIPAL AO MUDAR O MAPA DE FUNDO
