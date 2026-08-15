@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIG Caucaia - WebGIS v1.6.6</title>
+  
+  <!-- CSS do Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- CSS do Plugin de Pesquisa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css" />
+
+  <!-- CSS do Leaflet Draw (Ferramentas de Desenho) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  
+  <!-- Ícones FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style id="page-orientation-style">
+    @page {
+      size: landscape;
+      margin: 0;
+    }
+  </style>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BARRA SUPERIOR VINHO */
+    .header-topo {
+      background-color: #9e1418;
+      color: #ffffff;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      border-bottom: 3px solid #e74c3c;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 2000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* CABEÇALHO PRINCIPAL COM LOGO E TITULO */
+    .header-main {
+      background-color: #ffffff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e0e0e0;
+      z-index: 2000;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .header-logo {
+      height: 65px;
+      display: block;
+    }
+
+    /* Badge estilizado dos 266 Anos */
+    .badge-266 {
+      background: linear-gradient(135deg, #9e1418, #c0392b);
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 2px solid #f1c40f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .badge-266 .numero {
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+      color: #f1c40f;
+    }
+
+    .badge-266 .texto {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-title {
+      font-size: 19px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    /* CONTAINER DO MAPA */
+    #map {
+      flex: 1;
+      width: 100%;
+      position: relative;
+    }
+
+    /* PAINEL IBGE EXPANSÍVEL ABAIXO DO BOTÃO DE CAMADAS (SUPERIOR DIREITO) */
+    .leaflet-top.leaflet-right .painel-ibge-container {
+      margin-top: 10px;
+      margin-right: 12px;
+      clear: both;
+    }
+
+    .ibge-toggle-btn {
+      background: #ffffff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      color: #9e1418;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      justify-content: space-between;
+      transition: background 0.2s;
+    }
+
+    .ibge-toggle-btn:hover {
+      background: #f8f8f8;
+    }
+
+    .painel-ibge-content {
+      display: none;
+      background: #ffffff;
+      padding: 12px 14px;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      width: 250px;
+      font-size: 12px;
+      border-left: 4px solid #9e1418;
+      margin-top: 2px;
+    }
+
+    .item-ibge {
+      margin-bottom: 6px;
+      color: #333333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-ibge span.valor {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    .rodape-ibge {
+      font-size: 10px;
+      color: #7f8c8d;
+      margin-top: 8px;
+      text-align: right;
+      font-style: italic;
+    }
+
+    /* LEGENDA DINÂMICA (CANTO INFERIOR ESQUERDO) */
+    .info.legend {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px 12px;
+      font-size: 11px;
+      line-height: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      border-radius: 6px;
+      max-height: 280px;
+      overflow-y: auto;
+      max-width: 320px;
+      color: #333;
+      margin-left: 12px;
+      margin-bottom: 12px;
+    }
+
+    .legend h4 {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      color: #2c3e50;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 4px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 3px;
+    }
+
+    .legend-color {
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      border-radius: 2px;
+      display: inline-block;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    /* REORGANIZAÇÃO DOS CONTROLES NA LATERAL DIREITA */
+    .leaflet-right .leaflet-control {
+      margin-right: 12px !important;
+    }
+
+    /* Botões customizados */
+    .custom-map-btn {
+      background-color: #ffffff;
+      width: 34px;
+      height: 34px;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #333333;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+
+    .custom-map-btn:hover {
+      background-color: #f4f4f4;
+      color: #9e1418;
+    }
+
+    .custom-map-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: #000000;
+      transition: fill 0.2s;
+    }
+
+    .custom-map-btn:hover svg {
+      fill: #9e1418;
+    }
+
+    /* MODAL SELEÇÃO DE ORIENTAÇÃO DE IMPRESSÃO E DOWNLOAD */
+    .print-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .print-modal {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      width: 300px;
+      text-align: center;
+    }
+
+    .print-modal h3 {
+      margin-top: 0;
+      color: #9e1418;
+      font-size: 16px;
+    }
+
+    .print-modal-options {
+      display: flex;
+      gap: 10px;
+      margin: 18px 0;
+      justify-content: center;
+    }
+
+    .print-btn-option {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      background: #f9f9f9;
+      cursor: pointer;
+      font-weight: bold;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .print-btn-option:hover {
+      border-color: #9e1418;
+      color: #9e1418;
+      background: #fff;
+    }
+
+    /* ESTILOS PARA O BOTÃO E MODAL DE DOWNLOAD DE MAPAS */
+    .download-link-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fdfdfd;
+      color: #2c3e50;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+
+    .download-link-btn:hover {
+      background: #f4f6f7;
+      border-color: #9e1418;
+      color: #9e1418;
+    }
+
+    .print-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-cancelar {
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* ROSA DOS VENTOS EXCLUSIVA PARA IMPRESSÃO */
+    .print-norte {
+      display: none;
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .print-norte svg {
+      width: 55px;
+      height: 55px;
+    }
+
+    /* ESTILOS DE IMPRESSÃO */
+    @media print {
+      body, html {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .header-topo, .header-main, .leaflet-control-container, .print-modal-overlay {
+        display: none !important;
+      }
+
+      .print-norte, .info.legend {
+        display: block !important;
+      }
+
+      #map {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+    }
+
+    /* Popups Estilizados */
+    .popup-btn {
+      display: block;
+      margin-top: 5px;
+      padding: 5px 8px;
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 11px;
+      text-align: center;
+    }
+    .btn-lei104 { background-color: #2980b9; }
+    .btn-lei121 { background-color: #27ae60; }
+    .btn-lei122 { background-color: #8e44ad; }
+    .btn-lei-bairro { background-color: #d35400; }
+    .btn-lei-jb { background-color: #27ae60; }
+
+    .tag-bairro-novo {
+      background-color: #e8f8f5;
+      color: #117a65;
+      border: 1px solid #a3e4d7;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+      display: inline-block;
+      margin-left: 5px;
+    }
+
+    .label-distrito {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #8e44ad;
+      border-radius: 4px;
+      color: #4a154b;
+      font-weight: bold;
+      font-size: 11px;
+      padding: 2px 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA DE TOPO VINHO -->
+  <div class="header-topo">
+    <span>Prefeitura Municipal de Caucaia</span>
+    <span style="font-weight: normal; font-size: 12px;">Plataforma GIS - v1.6.6</span>
+  </div>
+
+  <!-- BARRA PRINCIPAL -->
+  <div class="header-main">
+    <div class="header-left">
+      <img src="https://www.caucaia.ce.gov.br/imagens/logo.png" alt="Prefeitura de Caucaia" class="header-logo" />
+      <div class="badge-266">
+        <span class="numero">266</span>
+        <span class="texto">Anos</span>
+      </div>
+    </div>
+    <div class="header-title">Sistema de Informações Geográficas - Caucaia</div>
+  </div>
+
+  <!-- CONTAINER DO MAPA -->
+  <div id="map">
+    <!-- ROSA DOS VENTOS / NORTE NA IMPRESSÃO -->
+    <div class="print-norte">
+      <svg viewBox="0 0 100 100">
+        <polygon points="50,2 2,98 25,82 50,2" fill="#9e1418" />
+        <polygon points="50,2 98,98 75,82 50,2" fill="#2c3e50" />
+        <text x="50" y="88" font-family="Arial, sans-serif" font-weight="900" font-size="38" text-anchor="middle" fill="#000">N</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- MODAL DE SELEÇÃO DE IMPRESSÃO -->
+  <div class="print-modal-overlay" id="printModal">
+    <div class="print-modal">
+      <h3><i class="fa-solid fa-print"></i> Opções de Impressão</h3>
+      <p style="font-size: 12px; color: #666;">Selecione a orientação da página antes de gerar o documento / PDF:</p>
+      
+      <div class="print-modal-options">
+        <button class="print-btn-option" onclick="executarImpressao('portrait')">
+          <i class="fa-solid fa-file" style="font-size: 24px;"></i>
+          Retrato (Portrait)
+        </button>
+        <button class="print-btn-option" onclick="executarImpressao('landscape')">
+          <i class="fa-solid fa-file" style="font-size: 24px; transform: rotate(-90deg);"></i>
+          Paisagem (Landscape)
+        </button>
+      </div>
+
+      <div class="print-modal-actions">
+        <button class="btn-cancelar" onclick="fecharModalImpressao()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DOWNLOAD DE MAPAS OFICIAIS -->
+  <div class="print-modal-overlay" id="downloadModal">
+    <div class="print-modal" style="width: 360px;">
+      <h3><i class="fa-solid fa-file-arrow-down"></i> Mapas Oficiais</h3>
+      <p style="font-size: 12px; color: #666;">Clique para baixar os arquivos oficiais de mapeamento:</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 10px; margin: 18px 0; text-align: left;">
+        <a href="Mapa_Localidades_2008.pdf" download target="_blank" class="download-link-btn">
+          <i class="fa-solid fa-file-pdf" style="font-size: 22px; color: #e74c3c;"></i>
+          <span>Mapa de Localidades (2008)</span>
+        </a>
+        <a href="limite_bairros_2026_a0.pdf" download target="_blank" class="download-link-btn">
+          <i class="fa-solid fa-file-pdf" style="font-size: 22px; color: #e74c3c;"></i>
+          <span>Limite dos Bairros (2026) A0</span>
+        </a>
+      </div>
+
+      <div class="print-modal-actions">
+        <button class="btn-cancelar" onclick="fecharModalDownload()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Biblioteca do Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- 2. Script do Plugin de Pesquisa -->
+  <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
+
+  <!-- 3. Script do Leaflet Draw -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+  <!-- 4. Arquivos de dados GeoJSON locais -->
+  <script src="limite_municipal.js"></script>
+  <script src="loteamentos.js"></script>
+  <script src="zoneamento_municipal.js"></script>
+  <script src="distritos_caucaia.js"></script>
+  <script src="limite_bairros.js"></script>
+  <script src="jardim_botanico.js"></script>
+  <script src="zeec_planicie_litoranea.js"></script>
+  <script src="zeec_sistemas_interiores.js"></script>
+
+  <!-- 5. Script principal do mapa -->
+  <script>
+    // TRADUÇÃO LEAFLET DRAW
+    if (typeof L.drawLocal !== 'undefined') {
+      L.drawLocal.draw.toolbar.actions = { title: 'Cancelar desenho', text: 'Cancelar' };
+      L.drawLocal.draw.toolbar.finish = { title: 'Finalizar desenho', text: 'Finalizar' };
+      L.drawLocal.draw.toolbar.undo = { title: 'Excluir último ponto desenhado', text: 'Desfazer' };
+      L.drawLocal.draw.toolbar.buttons = {
+        polyline: 'Desenhar uma linha / caminho',
+        polygon: 'Desenhar um polígono / área',
+        rectangle: 'Desenhar um retângulo',
+        circle: 'Desenhar um círculo',
+        marker: 'Inserir um marcador / ponto',
+        circlemarker: 'Inserir um marcador circular'
+      };
+      L.drawLocal.draw.handlers.circle.tooltip.start = 'Clique e arraste para desenhar o círculo.';
+      L.drawLocal.draw.handlers.circle.radius = 'Raio';
+      L.drawLocal.draw.handlers.marker.tooltip.start = 'Clique no mapa para colocar o marcador.';
+      L.drawLocal.draw.handlers.polygon.tooltip = {
+        start: 'Clique para começar a desenhar a forma.',
+        cont: 'Clique para continuar desenhando a forma.',
+        end: 'Clique no primeiro ponto para fechar esta forma.'
+      };
+      L.drawLocal.draw.handlers.polyline.tooltip = {
+        start: 'Clique para começar a desenhar a linha.',
+        cont: 'Clique para continuar a desenhar a linha.',
+        end: 'Clique no último ponto para finalizar a linha.'
+      };
+      L.drawLocal.draw.handlers.rectangle.tooltip.start = 'Clique e arraste para desenhar o retângulo.';
+      
+      L.drawLocal.edit.toolbar.actions = {
+        save: { title: 'Salvar alterações', text: 'Salvar' },
+        cancel: { title: 'Cancelar edição, descarta todas as alterações', text: 'Cancelar' },
+        clearAll: { title: 'Limpar todos os desenhos', text: 'Limpar Tudo' }
+      };
+      L.drawLocal.edit.toolbar.buttons = {
+        edit: 'Editar desenhos',
+        editDisabled: 'Nenhum desenho para editar',
+        remove: 'Excluir desenhos',
+        removeDisabled: 'Nenhum desenho para excluir'
+      };
+      L.drawLocal.edit.handlers.edit.tooltip = {
+        subtext: 'Arraste os pontos para editar a forma.',
+        text: 'Arraste as alças ou o marcador para editar a feição.'
+      };
+      L.drawLocal.edit.handlers.remove.tooltip.text = 'Clique em uma feição para removê-la.';
+    }
+
+    // Camadas Base
+    const mapLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    });
+
+    const mapDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    });
+
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    });
+
+    const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles © Esri'
+    });
+
+    const map = L.map('map', {
+      layers: [esriSat],
+      zoomControl: false
+    });
+
+    // Controle de Zoom
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // BOTÃO NORTE
+    const northControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function (map) {
+        const container = L.DomUtil.create('div', 'leaflet-bar custom-map-btn');
+        container.setAttribute('title', 'Orientação Norte');
+        container.innerHTML = `
+          <svg viewBox="0 0 100 100">
+            <polygon points="50,2 2,98 25,82 50,2" />
+            <polygon points="50,2 98,98 75,82 50,2" />
+            <text x="50" y="88" font-family="Arial, sans-serif" font-weight="900" font-size="42" text-anchor="middle">N</text>
+          </svg>
+        `;
+        container.onclick = function () {
+          map.setView(map.getCenter());
+        };
+        return container;
+      }
+    });
+    map.addControl(new northControl());
+
+    // BOTÃO GEOLOCALIZAÇÃO
+    const locateControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function (map) {
+        const container = L.DomUtil.create('div', 'leaflet-bar custom-map-btn');
+        container.innerHTML = '<i class="fa-solid fa-crosshairs" title="Sua Localização"></i>';
+        container.onclick = function () {
+          map.locate({ setView: true, maxZoom: 16 });
+        };
+        return container;
+      }
+    });
+    map.addControl(new locateControl());
+
+    // BOTÃO DE DOWNLOAD DE MAPAS OFICIAIS
+    const downloadControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function (map) {
+        const container = L.DomUtil.create('div', 'leaflet-bar custom-map-btn');
+        container.innerHTML = '<i class="fa-solid fa-file-arrow-down" title="Baixar Mapas Oficiais"></i>';
+        container.onclick = function () {
+          document.getElementById('downloadModal').style.display = 'flex';
+        };
+        return container;
+      }
+    });
+    map.addControl(new downloadControl());
+
+    function fecharModalDownload() {
+      document.getElementById('downloadModal').style.display = 'none';
+    }
+
+    // BOTÃO DE IMPRESSÃO
+    const printControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function (map) {
+        const container = L.DomUtil.create('div', 'leaflet-bar custom-map-btn');
+        container.innerHTML = '<i class="fa-solid fa-print" title="Imprimir Mapa / Salvar em PDF"></i>';
+        container.onclick = function () {
+          document.getElementById('printModal').style.display = 'flex';
+        };
+        return container;
+      }
+    });
+    map.addControl(new printControl());
+
+    function fecharModalImpressao() {
+      document.getElementById('printModal').style.display = 'none';
+    }
+
+    function executarImpressao(orientacao) {
+      fecharModalImpressao();
+      const styleTag = document.getElementById('page-orientation-style');
+      styleTag.innerHTML = `@page { size: ${orientacao}; margin: 0; }`;
+
+      map.invalidateSize();
+      setTimeout(function() {
+        window.print();
+      }, 300);
+    }
+
+    map.on('locationfound', function (e) {
+      L.marker(e.latlng).addTo(map).bindPopup("<b>Você está aqui</b>").openPopup();
+    });
+
+    map.on('locationerror', function () {
+      alert("Não foi possível obter sua localização atual.");
+    });
+
+    // FERRAMENTAS DE DESENHO
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      draw: {
+        polyline: { shapeOptions: { color: '#f39c12', weight: 4 } },
+        polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.4 } },
+        rectangle: { shapeOptions: { color: '#3498db', fillColor: '#3498db', fillOpacity: 0.4 } },
+        circle: { shapeOptions: { color: '#2ecc71', fillColor: '#2ecc71', fillOpacity: 0.4 } },
+        marker: true,
+        circlemarker: false
+      },
+      edit: { featureGroup: drawnItems, remove: true }
+    });
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (event) {
+      const layer = event.layer;
+      drawnItems.addLayer(layer);
+      const texto = prompt("Digite uma anotação para este desenho (opcional):");
+      if (texto) layer.bindPopup(texto).openPopup();
+    });
+
+    const linkLei2057 = "https://www.caucaia.ce.gov.br/arquivos/1303/2057.pdf";
+    const linkLei4011 = "https://www.caucaia.ce.gov.br/arquivos/3194/Lei_Municipal_4011_2026_0000001.pdf";
+    const linkLei3571 = "#"; 
+
+    // CARREGAMENTO DAS CAMADAS GEOJSON
+
+    // 1. Limite Municipal
+    let camadaCaucaia;
+    if (typeof limiteMunicipal !== 'undefined') {
+      camadaCaucaia = L.geoJSON(limiteMunicipal, {
+        style: { 
+          color: '#ffffff', 
+          weight: 3, 
+          dashArray: '6, 6', 
+          fillColor: 'transparent', 
+          fillOpacity: 0 
+        },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            layer.bindPopup(`
+              <div style="font-family: sans-serif;">
+                <h3 style="margin: 0 0 8px 0; color: #2c3e50;">${feature.properties.municipio || 'Caucaia'}</h3>
+                <b>Região:</b> ${feature.properties.regiao || 'N/A'}<br>
+                <b>Área:</b> ${feature.properties.area_km2 || 'N/A'} km²<br>
+                <b>Código IBGE:</b> ${feature.properties.cod_ibge || 'N/A'}<br>
+                <b>Ano de Criação:</b> ${feature.properties.ano_cria || 'N/A'}
+              </div>
+            `);
+          }
+        }
+      }).addTo(map);
+
+      map.fitBounds(camadaCaucaia.getBounds());
+    } else {
+      map.setView([-3.736, -38.653], 12);
+    }
+
+    // 2. Distritos
+    let camadaDistritos;
+    if (typeof distritosCaucaia !== 'undefined') {
+      camadaDistritos = L.geoJSON(distritosCaucaia, {
+        style: { color: '#8e44ad', weight: 2, fillColor: '#9b59b6', fillOpacity: 0.25 },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            const nomeDistrito = feature.properties.nm_distrit || feature.properties.nome || feature.properties.DISTRITO || 'Distrito Sem Nome';
+            const codigoDistrito = feature.properties.cd_distrit || feature.properties.codigo || 'N/A';
+
+            layer.bindPopup(`
+              <div style="font-family: sans-serif;">
+                <h3 style="margin: 0 0 8px 0; color: #8e44ad;">Distrito: ${nomeDistrito}</h3>
+                <b>Código:</b> ${codigoDistrito}<br>
+                <b>Descrição:</b> Divisão Distrital Municipal
+              </div>
+            `);
+
+            layer.bindTooltip(nomeDistrito, { permanent: true, direction: 'center', className: 'label-distrito' });
+          }
+        }
+      });
+    }
+
+    // 3. Limite de Bairros (Otimizado v1.6.6 - Sem rótulos pesados para maior fluidez)
+    let camadaBairros;
+    if (typeof limiteBairros !== 'undefined') {
+      camadaBairros = L.geoJSON(limiteBairros, {
+        style: { color: '#d35400', weight: 1.5, fillColor: '#e67e22', fillOpacity: 0.25 },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            const nomeBairro = feature.properties.nome || feature.properties.BAIRRO || 'Bairro';
+            
+            layer.bindPopup(`
+              <div style="font-family: sans-serif; min-width: 200px;">
+                <h3 style="margin: 0 0 6px 0; color: #d35400;">Bairro: ${nomeBairro}</h3>
+                <b>Legislação Pertinente:</b>
+                <a href="${linkLei2057}" target="_blank" class="popup-btn btn-lei-bairro">📄 Lei nº 2057/2009 (Criação de Bairros)</a>
+                <a href="${linkLei3571}" target="_blank" class="popup-btn btn-lei-bairro">📄 Lei nº 3571/2023</a>
+              </div>
+            `);
+          }
+        }
+      });
+    }
+
+    // 4. Bairro Novo: Jardim Botânico
+    let camadaJardimBotanico;
+    if (typeof jardimBotanico !== 'undefined') {
+      camadaJardimBotanico = L.geoJSON(jardimBotanico, {
+        style: { color: '#16a085', weight: 2.5, fillColor: '#2ecc71', fillOpacity: 0.4 },
+        onEachFeature: function (feature, layer) {
+          layer.bindPopup(`
+            <div style="font-family: sans-serif; min-width: 220px;">
+              <h3 style="margin: 0 0 6px 0; color: #117a65;">
+                Jardim Botânico <span class="tag-bairro-novo">Bairro Novo</span>
+              </h3>
+              <div style="font-size: 12px; color: #555; margin-bottom: 8px;">
+                Bairro recém-criado pela legislação municipal.
+              </div>
+              <b>Legislação de Criação:</b>
+              <a href="${linkLei4011}" target="_blank" class="popup-btn btn-lei-jb">📄 Lei Municipal nº 4.011/2026</a>
+            </div>
+          `);
+        }
+      });
+    }
+
+    // 5. Loteamentos
+    let camadaLoteamentos;
+    if (typeof loteamentos !== 'undefined') {
+      camadaLoteamentos = L.geoJSON(loteamentos, {
+        style: { color: '#e74c3c', weight: 2, fillColor: '#e74c3c', fillOpacity: 0.3 },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            layer.bindPopup(`
+              <div style="font-family: sans-serif;">
+                <h3 style="margin: 0 0 8px 0; color: #e74c3c;">${feature.properties.nome || 'Loteamento'}</h3>
+                <b>Pasta:</b> ${feature.properties.pasta || 'N/A'}<br>
+                <b>Número:</b> ${feature.properties.numero || 'N/A'}<br>
+                <b>Área Total:</b> ${feature.properties.area_total ? feature.properties.area_total + ' m²' : 'N/A'}<br>
+                ${feature.properties.drive ? `<a href="${feature.properties.drive}" target="_blank">Acessar Pasta no Drive</a>` : ''}
+              </div>
+            `);
+          }
+        }
+      });
+    }
+
+    // 6. Zoneamento Municipal
+    function getCorZona(valor) {
+      switch (valor) {
+        case 'APA':      return '#8bc34a';
+        case 'AUE':      return '#f5f5dc';
+        case 'DI-1':     return '#a52a2a';
+        case 'DI-2':     return '#7f8c8d';
+        case 'DI-3':     return '#d2b48c';
+        case 'DI-4':     return '#ff8080';
+        case 'PARQUE':   return '#27ae60';
+        case 'ZAD-1':    return '#00bcd4';
+        case 'ZAD-2':    return '#ab47bc';
+        case 'ZBD':      return '#fff176';
+        case 'ZBD-OR':   return '#d4e157';
+        case 'ZE':       return '#ba68c8';
+        case 'ZEIT-1':   return '#29b6f6';
+        case 'ZEIT-2':   return '#f48fb1';
+        case 'ZEIT-3':   return '#90caf9';
+        case 'ZEIT-4':   return '#ffcdd2';
+        case 'ZEIT-5':   return '#fff59d';
+        case 'ZMD':      return '#ff7043';
+        case 'ZR':       return '#ffffff';
+        default:         return '#bdc3c7';
+      }
+    }
+
+    function getNomeExtensoZona(sigla) {
+      switch (sigla) {
+        case 'APA':      return 'Área de Proteção Ambiental';
+        case 'AUE':      return 'Área Urbana Especial';
+        case 'DI-1':     return 'Distrito Industrial 1';
+        case 'DI-2':     return 'Distrito Industrial 2';
+        case 'DI-3':     return 'Distrito Industrial 3';
+        case 'DI-4':     return 'Distrito Industrial 4';
+        case 'PARQUE':   return 'Parque Urbano / Ecológico';
+        case 'ZAD-1':    return 'Zona de Alta Densidade 1';
+        case 'ZAD-2':    return 'Zona de Alta Densidade 2';
+        case 'ZBD':      return 'Zona de Baixa Densidade';
+        case 'ZBD-OR':   return 'Zona de Baixa Densidade - Orla';
+        case 'ZE':       return 'Zona Especial';
+        case 'ZEIT-1':   return 'Zona Especial de Interesse Turístico 1';
+        case 'ZEIT-2':   return 'Zona Especial de Interesse Turístico 2';
+        case 'ZEIT-3':   return 'Zona Especial de Interesse Turístico 3';
+        case 'ZEIT-4':   return 'Zona Especial de Interesse Turístico 4';
+        case 'ZEIT-5':   return 'Zona Especial de Interesse Turístico 5';
+        case 'ZMD':      return 'Zona de Média Densidade';
+        case 'ZR':       return 'Zona Rural';
+        default:         return 'Zoneamento Municipal';
+      }
+    }
+
+    let camadaZoneamento;
+    if (typeof zoneamentoMunicipal !== 'undefined') {
+      camadaZoneamento = L.geoJSON(zoneamentoMunicipal, {
+        style: function (feature) {
+          const siglaZona = feature.properties.sigla || feature.properties.zona || feature.properties.NOME || feature.properties.Valor;
+          return { color: getCorZona(siglaZona), weight: 1.5, fillColor: getCorZona(siglaZona), fillOpacity: 0.55 };
+        },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            const siglaZona = feature.properties.sigla || feature.properties.zona || feature.properties.NOME || feature.properties.Valor || 'N/A';
+            const nomeExtenso = getNomeExtensoZona(siglaZona);
+
+            const linkLei104 = "https://www.caucaia.ce.gov.br/arquivos/2072/LEI%20COMPLEMENTAR_104_2022_0000001.pdf";
+            const linkLei121 = "https://www.caucaia.ce.gov.br/arquivos/2711/LEI%20COMPLEMENTAR_121_2023_0000001.pdf";
+            const linkLei122 = "https://www.caucaia.ce.gov.br/arquivos/2712/LEI%20COMPLEMENTAR_122_2023_0000001.pdf";
+
+            let blocoAcaoHtml = (siglaZona === 'AUE' || siglaZona === 'ZR') ? `
+                <div style="margin-top: 8px; padding: 8px; background-color: #fcf8e3; border: 1px solid #faebcc; border-radius: 4px; color: #8a6d3b; font-size: 11px; line-height: 1.3;">
+                  ⚠️ <b>Não há parâmetro definido na Lei:</b> Necessária análise prévia do Conselho Municipal.
+                </div>
+              ` : `
+                <div style="margin-top: 8px;">
+                  <b>Legislação Aplicável:</b>
+                  <a href="${linkLei104}" target="_blank" class="popup-btn btn-lei104">📄 Lei nº 104/2022 (Plano Diretor)</a>
+                  <a href="${linkLei121}" target="_blank" class="popup-btn btn-lei121">📄 Lei nº 121/2023 (Uso e Ocupação)</a>
+                  <a href="${linkLei122}" target="_blank" class="popup-btn btn-lei122">📄 Lei nº 122/2023</a>
+                </div>
+              `;
+
+            layer.bindPopup(`
+              <div style="font-family: sans-serif; min-width: 230px;">
+                <h3 style="margin: 0 0 4px 0; color: #2c3e50;">Zoneamento: ${siglaZona}</h3>
+                <div style="font-size: 13px; color: #555; margin-bottom: 6px;"><b>Descrição:</b> ${nomeExtenso}</div>
+                ${blocoAcaoHtml}
+              </div>
+            `);
+          }
+        }
+      });
+    }
+
+    // 7 & 8. ZEEC - Função de cores via Hash
+    function getCorZeec(subzona) {
+      if (!subzona) return '#95a5a6';
+      const sub = String(subzona).toUpperCase().trim();
+
+      if (sub.includes('PRESERVAÇÃO') || sub.includes('PRESERVACAO') || sub.includes('SP')) return '#27ae60';
+      if (sub.includes('CONSERVAÇÃO') || sub.includes('CONSERVACAO') || sub.includes('SC')) return '#2ecc71';
+      if (sub.includes('DULCÍCOLA') || sub.includes('DULCICOLA') || sub.includes('RECURSOS HÍDRICOS') || sub.includes('LAGOA') || sub.includes('RIO')) return '#2980b9';
+      if (sub.includes('ORLA') || sub.includes('PRAIA') || sub.includes('DUNA')) return '#f1c40f';
+      if (sub.includes('URBANA') || sub.includes('OCUPAÇÃO') || sub.includes('OCUPACAO') || sub.includes('EDIFICADA')) return '#e67e22';
+      if (sub.includes('AGRO') || sub.includes('SILVO') || sub.includes('PASTORIL') || sub.includes('RURAL')) return '#8e44ad';
+      if (sub.includes('INDUSTRIAL') || sub.includes('PORTO') || sub.includes('PORTUÁRIA')) return '#c0392b';
+
+      let hash = 0;
+      for (let i = 0; i < sub.length; i++) {
+        hash = sub.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      let color = '#';
+      for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 0xFF;
+        color += ('00' + value.toString(16)).substr(-2);
+      }
+      return color;
+    }
+
+    let camadaZeecPlanicie;
+    if (typeof zeecPlanicieLitoranea !== 'undefined') {
+      camadaZeecPlanicie = L.geoJSON(zeecPlanicieLitoranea, {
+        style: function(feature) {
+          const subZona = feature.properties ? (feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || '') : '';
+          const cor = getCorZeec(subZona);
+          return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.5 };
+        },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            const subZona = feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || 'N/A';
+            const zona = feature.properties.ZONAS || feature.properties.ZONA || feature.properties.zonas || feature.properties.zona || 'N/A';
+            layer.bindPopup(`<div style="font-family: sans-serif;"><h3>ZEEC - Planície Litorânea</h3><b>Sub-zona:</b> ${subZona}<br><b>Zona:</b> ${zona}</div>`);
+          }
+        }
+      });
+    }
+
+    let camadaZeecSistemas;
+    if (typeof zeecSistemasInteriores !== 'undefined') {
+      camadaZeecSistemas = L.geoJSON(zeecSistemasInteriores, {
+        style: function(feature) {
+          const subZona = feature.properties ? (feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || '') : '';
+          const cor = getCorZeec(subZona);
+          return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.5 };
+        },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties) {
+            const subZona = feature.properties.SUB_ZONAS || feature.properties.sub_zonas || feature.properties.SUB_ZONA || feature.properties.sub_zona || 'N/A';
+            const zona = feature.properties.ZONAS || feature.properties.ZONA || feature.properties.zonas || feature.properties.zona || 'N/A';
+            layer.bindPopup(`<div style="font-family: sans-serif;"><h3>ZEEC - Sistemas Interiores</h3><b>Sub-zona:</b> ${subZona}<br><b>Zona:</b> ${zona}</div>`);
+          }
+        }
+      });
+    }
+
+    // Seletor de Mapas de Fundo e Camadas Vetoriais
+    const baseMaps = { 
+      "Esri Satélite": esriSat, 
+      "Mapa Light": mapLight,
+      "Mapa Dark": mapDark,
+      "OpenStreetMap": osm 
+    };
+    
+    const overlayMaps = { "Desenhos / Anotações": drawnItems };
+
+    if (camadaCaucaia) overlayMaps["Limite Municipal"] = camadaCaucaia;
+    if (camadaDistritos) overlayMaps["Distritos"] = camadaDistritos;
+    if (camadaBairros) overlayMaps["Bairros"] = camadaBairros;
+    if (camadaJardimBotanico) overlayMaps["Bairro Jardim Botânico (Novo)"] = camadaJardimBotanico;
+    if (camadaLoteamentos) overlayMaps["Loteamentos"] = camadaLoteamentos;
+    if (camadaZoneamento) overlayMaps["Zoneamento - LC 104/2022"] = camadaZoneamento;
+    if (camadaZeecPlanicie) overlayMaps["ZEEC - Planície Litorânea"] = camadaZeecPlanicie;
+    if (camadaZeecSistemas) overlayMaps["ZEEC - Sistemas Interiores"] = camadaZeecSistemas;
+
+    const layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+
+    // ALTERAÇÃO DE COR DO LIMITE MUNICIPAL AO MUDAR O MAPA DE FUNDO
+    map.on('baselayerchange', function (e) {
+      if (camadaCaucaia) {
+        if (e.layer === osm || e.layer === mapLight) {
+          camadaCaucaia.setStyle({ color: '#000000' });
+        } else {
+          camadaCaucaia.setStyle({ color: '#ffffff' });
+        }
+      }
+    });
+
+    // GERENCIAMENTO DA LEGENDA DINÂMICA
+    const legendControl = L.control({ position: 'bottomleft' });
+
+    legendControl.onAdd = function () {
+      const div = L.DomUtil.create('div', 'info legend');
+      div.id = 'legend-box';
+      div.style.display = 'none';
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    legendControl.addTo(map);
+
+    function extrairSubzonasUnicas(geojsonData) {
+      const subzonas = new Set();
+      if (geojsonData && geojsonData.features) {
+        geojsonData.features.forEach(f => {
+          if (f.properties) {
+            const nomeSub = f.properties.SUB_ZONAS || f.properties.sub_zonas || f.properties.SUB_ZONA || f.properties.sub_zona;
+            if (nomeSub && String(nomeSub).trim() !== '') {
+              subzonas.add(String(nomeSub).trim());
+            }
+          }
+        });
+      }
+      return Array.from(subzonas).sort();
+    }
+
+    function atualizarLegenda() {
+      const legendBox = document.getElementById('legend-box');
+      if (!legendBox) return;
+
+      let html = '';
+      let temZoneamento = camadaZoneamento && map.hasLayer(camadaZoneamento);
+      let temZeecPlanicie = camadaZeecPlanicie && map.hasLayer(camadaZeecPlanicie);
+      let temZeecSistemas = camadaZeecSistemas && map.hasLayer(camadaZeecSistemas);
+
+      if (temZoneamento) {
+        html += '<h4>Legenda - Zoneamento</h4>';
+        const zonas = ['APA', 'AUE', 'DI-1', 'DI-2', 'DI-3', 'DI-4', 'PARQUE', 'ZAD-1', 'ZAD-2', 'ZBD', 'ZBD-OR', 'ZE', 'ZEIT-1', 'ZEIT-2', 'ZEIT-3', 'ZEIT-4', 'ZEIT-5', 'ZMD', 'ZR'];
+        zonas.forEach(z => {
+          html += `<div class="legend-item"><span class="legend-color" style="background:${getCorZona(z)}"></span> ${z} - ${getNomeExtensoZona(z)}</div>`;
+        });
+      }
+
+      if (temZeecPlanicie || temZeecSistemas) {
+        if (temZoneamento) html += '<hr style="margin: 8px 0; border: 0; border-top: 1px solid #ccc;">';
+        html += '<h4>Legenda - Zoneamento Ecológico-Econômico da Zona Costeira do Estado do Ceará (ZEEC)</h4>';
+
+        let subzonasEncontradas = new Set();
+
+        if (temZeecPlanicie && typeof zeecPlanicieLitoranea !== 'undefined') {
+          extrairSubzonasUnicas(zeecPlanicieLitoranea).forEach(s => subzonasEncontradas.add(s));
+        }
+        if (temZeecSistemas && typeof zeecSistemasInteriores !== 'undefined') {
+          extrairSubzonasUnicas(zeecSistemasInteriores).forEach(s => subzonasEncontradas.add(s));
+        }
+
+        const listaSubzonas = Array.from(subzonasEncontradas).sort();
+
+        if (listaSubzonas.length > 0) {
+          listaSubzonas.forEach(subName => {
+            const corSub = getCorZeec(subName);
+            html += `<div class="legend-item"><span class="legend-color" style="background:${corSub}"></span> ${subName}</div>`;
+          });
+        } else {
+          html += '<div style="font-style: italic; color: #777;">Carregando subzonas...</div>';
+        }
+      }
+
+      if (temZoneamento || temZeecPlanicie || temZeecSistemas) {
+        legendBox.innerHTML = html;
+        legendBox.style.display = 'block';
+      } else {
+        legendBox.style.display = 'none';
+      }
+    }
+
+    map.on('layeradd layerremove', function () {
+      atualizarLegenda();
+    });
+
+    // PAINEL FLUTUANTE IBGE - EXPANSÍVEL
+    const ibgeControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function (map) {
+        const container = L.DomUtil.create('div', 'painel-ibge-container');
+        container.innerHTML = `
+          <button class="ibge-toggle-btn" onclick="togglePainelIBGE()">
+            <span><i class="fa-solid fa-chart-line"></i> Panorama IBGE</span>
+            <i class="fa-solid fa-chevron-down" id="ibge-icon"></i>
+          </button>
+          <div class="painel-ibge-content" id="ibge-content">
+            <div class="item-ibge"><span>👥 População:</span><span class="valor" id="ibge-pop">Carregando...</span></div>
+            <div class="item-ibge"><span>📐 Densidade Demogr.:</span><span class="valor">290,13 hab/km²</span></div>
+            <div class="item-ibge"><span>💼 Rendimento Médio:</span><span class="valor">R$ 2.120,00</span></div>
+            <div class="item-ibge"><span>🎓 Escolarização:</span><span class="valor">96,8%</span></div>
+            <div class="item-ibge"><span>🏥 Unidades SUS:</span><span class="valor">52 unidades</span></div>
+            <div class="item-ibge"><span>💰 PIB per capita:</span><span class="valor">R$ 23.412,00</span></div>
+            <div class="rodape-ibge">Fonte: Censo / IBGE Cidades</div>
+          </div>
+        `;
+        L.DomEvent.disableClickPropagation(container);
+        return container;
+      }
+    });
+    map.addControl(new ibgeControl());
+
+    function togglePainelIBGE() {
+      const content = document.getElementById('ibge-content');
+      const icon = document.getElementById('ibge-icon');
+      if (content.style.display === 'block') {
+        content.style.display = 'none';
+        icon.className = 'fa-solid fa-chevron-down';
+      } else {
+        content.style.display = 'block';
+        icon.className = 'fa-solid fa-chevron-up';
+      }
+    }
+
+    // API IBGE
+    async function carregarDadosIBGE() {
+      try {
+        const res = await fetch('https://servicodados.ibge.gov.br/api/v1/pesquisas/indicadores/29171/resultados/2303709');
+        const data = await res.json();
+        if (data && data[0] && data[0].res && data[0].res[0]) {
+          const resObj = data[0].res[0].res;
+          const ultimoAno = Object.keys(resObj).sort().pop();
+          const popValor = parseInt(resObj[ultimoAno]).toLocaleString('pt-BR');
+          document.getElementById('ibge-pop').innerText = popValor + ' hab.';
+        } else {
+          document.getElementById('ibge-pop').innerText = '355.679 hab.';
+        }
+      } catch (err) {
+        document.getElementById('ibge-pop').innerText = '355.679 hab.';
+      }
+    }
+    carregarDadosIBGE();
+
+    // Pesquisa de Endereços
+    const searchControl = new GeoSearch.GeoSearchControl({
+      provider: new GeoSearch.OpenStreetMapProvider(),
+      style: 'bar',
+      autoComplete: true,
+      autoCompleteDelay: 250,
+      showMarker: true,
+      showPopup: true,
+      marker: { icon: new L.Icon.Default(), draggable: false },
+      searchLabel: 'Pesquisar rua ou endereço...',
+      notFoundMessage: 'Endereço não encontrado.'
+    });
+    map.addControl(searchControl);
+  </script>
+</body>
+</html>
