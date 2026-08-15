@@ -434,47 +434,33 @@
     }
 
     /* =========================================================
-       REGRAS DE RESPONSIVIDADE E FIX DE CAMADAS MOBILE
+       REGRAS DE RESPONSIVIDADE PARA CELULAR E TABLET (v1.6.6.1)
        ========================================================= */
     @media (max-width: 768px) {
       .header-title {
-        font-size: 12px !important;
+        font-size: 13px !important;
       }
 
       .header-logo {
-        height: 36px !important;
+        height: 40px !important;
       }
 
       .badge-266 {
-        display: none !important;
+        display: none !important; /* Oculta o selo no celular para economizar espaço */
       }
 
       .info.legend {
-        max-width: 180px !important;
+        max-width: 200px !important;
         font-size: 10px !important;
-        max-height: 180px !important;
+        max-height: 200px !important;
       }
 
       .painel-ibge-content {
-        width: 190px !important;
+        width: 200px !important;
       }
 
       .leaflet-control-geosearch {
-        max-width: 180px !important;
-      }
-
-      /* Garante a visibilidade e expansão do Seletor de Camadas no toque móvel */
-      .leaflet-control-layers {
-        max-height: 70vh !important;
-        overflow-y: auto !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important;
-        z-index: 1000 !important;
-      }
-
-      .leaflet-control-layers-expanded {
-        padding: 10px !important;
-        background: #ffffff !important;
-        width: 210px !important;
+        max-width: 220px !important;
       }
     }
   </style>
@@ -653,8 +639,7 @@
 
     const map = L.map('map', {
       layers: [esriSat],
-      zoomControl: false,
-      tap: true // Ativa suporte a toque otimizado para navegadores mobile
+      zoomControl: false
     });
 
     // Controle de Zoom
@@ -1073,12 +1058,7 @@
     if (camadaZeecPlanicie) overlayMaps["ZEEC - Planície Litorânea"] = camadaZeecPlanicie;
     if (camadaZeecSistemas) overlayMaps["ZEEC - Sistemas Interiores"] = camadaZeecSistemas;
 
-    // FORÇA O MENU DE CAMADAS A FICAR EXPANDIDO NO CELULAR CASO NECESSÁRIO
-    const isMobile = window.innerWidth <= 768;
-    const layerControl = L.control.layers(baseMaps, overlayMaps, { 
-      position: 'topright',
-      collapsed: !isMobile // No celular abre já expandido para facilitar a seleção
-    }).addTo(map);
+    const layerControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
     // ALTERAÇÃO DE COR DO LIMITE MUNICIPAL AO MUDAR O MAPA DE FUNDO
     map.on('baselayerchange', function (e) {
