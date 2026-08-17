@@ -702,8 +702,16 @@
       attribution: 'Tiles © Esri'
     });
 
+    // Camada Esri Hybrid (Satélite + Vias + Nomes)
+    const esriHybrid = L.layerGroup([
+      esriSat,
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 })
+    ]);
+
+    // Inicialização do Mapa com o Mapa Light ativo por padrão
     const map = L.map('map', {
-      layers: [esriSat],
+      layers: [mapLight],
       zoomControl: false,
       tap: true
     });
@@ -861,18 +869,18 @@
 
     // CARREGAMENTO DAS CAMADAS GEOJSON
 
-    // 1. Limite Municipal (SEM INTERATIVIDADE/SEM POPUP)
+    // 1. Limite Municipal (SEM INTERATIVIDADE/SEM POPUP) - Preto por padrão para o mapa Light
     let camadaCaucaia;
     if (typeof limiteMunicipal !== 'undefined') {
       camadaCaucaia = L.geoJSON(limiteMunicipal, {
         style: { 
-          color: '#ffffff', 
+          color: '#000000', 
           weight: 3, 
           dashArray: '6, 6', 
           fillColor: 'transparent', 
           fillOpacity: 0 
         },
-        interactive: false // Bloqueia cliques, hover e popups na camada
+        interactive: false
       }).addTo(map);
 
       map.fitBounds(camadaCaucaia.getBounds());
@@ -1140,12 +1148,13 @@
       });
     }
 
-    // Seletor de Mapas de Fundo e Camadas Vetoriais
+    // Seletor de Mapas de Fundo na Ordem Exata Solicitada
     const baseMaps = { 
-      "Esri Satélite": esriSat, 
       "Mapa Light": mapLight,
       "Mapa Dark": mapDark,
-      "OpenStreetMap": osm 
+      "OpenStreetMap": osm,
+      "Esri Satélite": esriSat,
+      "Esri Hybrid": esriHybrid
     };
     
     const overlayMaps = { "Desenhos / Anotações": drawnItems };
