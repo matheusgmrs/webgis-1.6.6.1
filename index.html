@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SIG Caucaia - WebGIS v1.6.6.1</title>
+  <title>SIG Caucaia - WebGIS v1.6.6.2</title>
   
   <!-- CSS do Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -110,6 +110,27 @@
       flex: 1;
       width: 100%;
       position: relative;
+    }
+
+    /* PAINEL DE COORDENADAS CENTRALIZADO NO BOTTOM DA TELA */
+    #utm-display-container {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #2c3e50;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      border: 1px solid #bdc3c7;
+      pointer-events: none;
+      white-space: nowrap;
+      display: flex;
+      gap: 12px;
     }
 
     /* PAINEL IBGE EXPANSÍVEL ABAIXO DO BOTÃO DE CAMADAS */
@@ -398,7 +419,7 @@
         padding: 0 !important;
       }
 
-      .header-topo, .header-main, .leaflet-control-container, .print-modal-overlay {
+      .header-topo, .header-main, .leaflet-control-container, .print-modal-overlay, #utm-display-container {
         display: none !important;
       }
 
@@ -487,10 +508,15 @@
         max-width: 180px !important;
       }
 
-      /* Controla a altura do menu suspenso de camadas para não ocupar a tela toda */
       .leaflet-control-layers-list {
         max-height: 50vh !important;
         overflow-y: auto !important;
+      }
+
+      #utm-display-container {
+        font-size: 10px;
+        padding: 4px 10px;
+        bottom: 8px;
       }
     }
   </style>
@@ -500,7 +526,7 @@
   <!-- BARRA DE TOPO VINHO -->
   <div class="header-topo">
     <span>Prefeitura Municipal de Caucaia</span>
-    <span style="font-weight: normal; font-size: 12px;">Plataforma GIS - v1.6.6.1</span>
+    <span style="font-weight: normal; font-size: 12px;">Plataforma GIS - v1.6.6.2</span>
   </div>
 
   <!-- BARRA PRINCIPAL -->
@@ -524,6 +550,13 @@
         <polygon points="50,2 98,98 75,82 50,2" fill="#2c3e50" />
         <text x="50" y="88" font-family="Arial, sans-serif" font-weight="900" font-size="38" text-anchor="middle" fill="#000">N</text>
       </svg>
+    </div>
+
+    <!-- MOSTRADOR DE COORDENADAS UTM (CENTRO INFERIOR) -->
+    <div id="utm-display-container">
+      <span>UTM 24S</span>
+      <span id="utm-x">E: -</span>
+      <span id="utm-y">N: -</span>
     </div>
   </div>
 
@@ -582,7 +615,10 @@
   <!-- 3. Script do Leaflet Draw -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-  <!-- 4. Arquivos de dados GeoJSON locais -->
+  <!-- 4. Proj4js para reprojeção de coordenadas UTM em tempo real -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+
+  <!-- 5. Arquivos de dados GeoJSON locais -->
   <script src="limite_municipal.js"></script>
   <script src="loteamentos.js"></script>
   <script src="zoneamento_municipal.js"></script>
@@ -592,8 +628,11 @@
   <script src="zeec_planicie_litoranea.js"></script>
   <script src="zeec_sistemas_interiores.js"></script>
 
-  <!-- 5. Script principal do mapa -->
+  <!-- 6. Script principal do mapa -->
   <script>
+    // Definição da Projeção SIRGAS 2000 / UTM Zona 24S (EPSG:31984)
+    proj4.defs("EPSG:31984", "+proj=utm +zone=24 +south +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+
     // TRADUÇÃO LEAFLET DRAW
     if (typeof L.drawLocal !== 'undefined') {
       L.drawLocal.draw.toolbar.actions = { title: 'Cancelar desenho', text: 'Cancelar' };
@@ -667,6 +706,16 @@
       layers: [esriSat],
       zoomControl: false,
       tap: true
+    });
+
+    // EVENTO MOUSEMOVE PARA ATUALIZAÇÃO DAS COORDENADAS UTM (CENTRO INFERIOR)
+    const utmXEl = document.getElementById('utm-x');
+    const utmYEl = document.getElementById('utm-y');
+
+    map.on('mousemove', function (e) {
+      const utm = proj4('EPSG:4326', 'EPSG:31984', [e.latlng.lng, e.latlng.lat]);
+      utmXEl.textContent = `E: ${utm[0].toFixed(2)}m`;
+      utmYEl.textContent = `N: ${utm[1].toFixed(2)}m`;
     });
 
     // Controle de Zoom
@@ -780,11 +829,30 @@
     });
     map.addControl(drawControl);
 
+    // TRATAMENTO DA INSERÇÃO DE MARCADOR E DESENHOS
     map.on(L.Draw.Event.CREATED, function (event) {
       const layer = event.layer;
+      const type = event.layerType;
       drawnItems.addLayer(layer);
-      const texto = prompt("Digite uma anotação para este desenho (opcional):");
-      if (texto) layer.bindPopup(texto).openPopup();
+
+      if (type === 'marker') {
+        const lat = layer.getLatLng().lat.toFixed(6);
+        const lng = layer.getLatLng().lng.toFixed(6);
+        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+
+        layer.bindPopup(`
+          <div style="font-family: sans-serif; text-align: center; padding: 2px;">
+            <b style="color: #9e1418; font-size: 13px;">Coordenadas (Google Maps)</b><br>
+            <span style="font-size: 12px; font-weight: bold; color: #2c3e50;">${lat}, ${lng}</span><br>
+            <a href="${googleMapsUrl}" target="_blank" class="popup-btn" style="background-color: #4285F4; margin-top: 8px;">
+              <i class="fa-solid fa-map-location-dot"></i> Abrir no Google Maps
+            </a>
+          </div>
+        `).openPopup();
+      } else {
+        const texto = prompt("Digite uma anotação para este desenho (opcional):");
+        if (texto) layer.bindPopup(texto).openPopup();
+      }
     });
 
     const linkLei2057 = "https://www.caucaia.ce.gov.br/arquivos/1303/2057.pdf";
@@ -793,7 +861,7 @@
 
     // CARREGAMENTO DAS CAMADAS GEOJSON
 
-    // 1. Limite Municipal
+    // 1. Limite Municipal (SEM INTERATIVIDADE/SEM POPUP)
     let camadaCaucaia;
     if (typeof limiteMunicipal !== 'undefined') {
       camadaCaucaia = L.geoJSON(limiteMunicipal, {
@@ -804,19 +872,7 @@
           fillColor: 'transparent', 
           fillOpacity: 0 
         },
-        onEachFeature: function (feature, layer) {
-          if (feature.properties) {
-            layer.bindPopup(`
-              <div style="font-family: sans-serif;">
-                <h3 style="margin: 0 0 8px 0; color: #2c3e50;">${feature.properties.municipio || 'Caucaia'}</h3>
-                <b>Região:</b> ${feature.properties.regiao || 'N/A'}<br>
-                <b>Área:</b> ${feature.properties.area_km2 || 'N/A'} km²<br>
-                <b>Código IBGE:</b> ${feature.properties.cod_ibge || 'N/A'}<br>
-                <b>Ano de Criação:</b> ${feature.properties.ano_cria || 'N/A'}
-              </div>
-            `);
-          }
-        }
+        interactive: false // Bloqueia cliques, hover e popups na camada
       }).addTo(map);
 
       map.fitBounds(camadaCaucaia.getBounds());
@@ -1005,7 +1061,7 @@
       });
     }
 
-    // 7 & 8. ZEEC - CORES AMBIENTAIS E POPUPS
+    // 7 & 8. ZEEC
     function getPropriedadeZeec(props, nomeCampo) {
       if (!props) return '';
       for (let key in props) {
@@ -1023,7 +1079,6 @@
       const subzona = String(getPropriedadeZeec(props, 'sub_zonas') || getPropriedadeZeec(props, 'sub_zona') || getPropriedadeZeec(props, 'subzonas') || getPropriedadeZeec(props, 'subzona')).toUpperCase().trim();
       const zona = String(getPropriedadeZeec(props, 'zonas') || getPropriedadeZeec(props, 'zona')).toUpperCase().trim();
 
-      // Mapeamento por Características Ambientais Reais:
       if (subzona.includes('MANGUEZAL DEGRADADO') || subzona.includes('MANGUE')) return '#33691e'; 
       if (subzona.includes('ALAGADO')) return '#00acc1'; 
       if (subzona.includes('CURSO D\'ÁGUA') || subzona.includes('CURSO D\'AGUA') || subzona.includes('CURSO D AGUA')) return '#0288d1'; 
@@ -1106,7 +1161,7 @@
 
     const layerControl = L.control.layers(baseMaps, overlayMaps, { 
       position: 'topright',
-      collapsed: true // Mantém o painel recolhido em forma de botão tanto em Desktop como Mobile
+      collapsed: true 
     }).addTo(map);
 
     // ALTERAÇÃO DE COR DO LIMITE MUNICIPAL AO MUDAR O MAPA DE FUNDO
@@ -1120,7 +1175,7 @@
       }
     });
 
-    // CONTROLE DE LEGENDA OCULTÁVEL COM BOTÃO FLUTUANTE
+    // CONTROLE DE LEGENDA OCULTÁVEL
     let legendaAbertaManual = false;
 
     const legendControl = L.control({ position: 'bottomleft' });
